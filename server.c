@@ -1,4 +1,5 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,56 +17,59 @@ void ErrorHandling(char* message) {
 int main(int argc, char** argv) {
 
     WSADATA wsaData;
-    SOCKET servSock, clntSock;      // ì†Œì¼“ ê·¸ ìì²´ì™€ ê´€ë ¨í•œ ì •ë³´ë¥¼ ë‹´ëŠ” êµ¬ì¡°ì²´.
-    SOCKADDR_IN servAddr, clntAddr; // IP ì£¼ì†Œ, TCP/UDP í¬íŠ¸ ì£¼ì†Œì— ëŒ€í•œ ì •ë³´ë¥¼ ë‹´ëŠ” êµ¬ì¡°ì²´.
+    SOCKET servSock, clntSock;      // ¼ÒÄÏ ±× ÀÚÃ¼¿Í °ü·ÃÇÑ Á¤º¸¸¦ ´ã´Â ±¸Á¶Ã¼.
+    SOCKADDR_IN servAddr, clntAddr; // IP ÁÖ¼Ò, TCP/UDP Æ÷Æ® ÁÖ¼Ò¿¡ ´ëÇÑ Á¤º¸¸¦ ´ã´Â ±¸Á¶Ã¼.
 
     char message[BUFSIZE];
     int strLen;
     int fromLen, nRcv;
+    int portNumber;
 
     //if (argc != 2) {
     //    printf("ERROR : PORT NUMBER NEEDED!\n");
     //    exit(1);
     //}
 
+    printf("ENTER SERVER PORT NUMBER : ");
+    scanf("%d", &portNumber);
 
-    // ws2_32.dll íŒŒì¼ ì´ˆê¸°í™”.
-    // MAKEWORD ë§¤í¬ë¡œ ì´ìš©, 2.2 ë²„ì „ ì§€ì •.
+    // ws2_32.dll ÆÄÀÏ ÃÊ±âÈ­.
+    // MAKEWORD ¸ÅÅ©·Î ÀÌ¿ë, 2.2 ¹öÀü ÁöÁ¤.
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
         ErrorHandling("Load Winsock 2.2 DLL Error");
 
 
-    // socket()ì„ í†µí•´ ì†Œì¼“ì„ ìƒì„±. TCP, UDP ë“± ê¸°ë³¸ì ì¸ ì„¤ì • êµ¬ì„±.
-    // ì²«ë²ˆì§¸ ì¸ìëŠ” AF_INET ë˜ëŠ” PF_INET. ê°ê° ì£¼ì†Œ ì²´ê³„ ê·¸ë¦¬ê³  í”„ë¡œí† ì½œ ì²´ê³„ë¥¼ ì˜ë¯¸.
-    // ë‘ë²ˆì§¸ ì¸ìëŠ” TCP(SOCK_STREAM) ë°©ì‹ì„ ì‚¬ìš©í• ì§€, UDP(SOCK_DGRAM) ë°©ì‹ì„ ì‚¬ìš©í• ì§€ ê²°ì •.
-    // ì„¸ë²ˆì§¸ ì¸ìëŠ” 0ì¼ ê²½ìš°, Auto ì¦‰ ìë™ìœ¼ë¡œ í”„ë¡œí† ì½œ ì„ ì •.
+    // socket()À» ÅëÇØ ¼ÒÄÏÀ» »ı¼º. TCP, UDP µî ±âº»ÀûÀÎ ¼³Á¤ ±¸¼º.
+    // Ã¹¹øÂ° ÀÎÀÚ´Â AF_INET ¶Ç´Â PF_INET. °¢°¢ ÁÖ¼Ò Ã¼°è ±×¸®°í ÇÁ·ÎÅäÄİ Ã¼°è¸¦ ÀÇ¹Ì.
+    // µÎ¹øÂ° ÀÎÀÚ´Â TCP(SOCK_STREAM) ¹æ½ÄÀ» »ç¿ëÇÒÁö, UDP(SOCK_DGRAM) ¹æ½ÄÀ» »ç¿ëÇÒÁö °áÁ¤.
+    // ¼¼¹øÂ° ÀÎÀÚ´Â 0ÀÏ °æ¿ì, Auto Áï ÀÚµ¿À¸·Î ÇÁ·ÎÅäÄİ ¼±Á¤.
     servSock = socket(PF_INET, SOCK_STREAM, 0);
 
-    if (servSock == INVALID_SOCKET) 
+    if (servSock == INVALID_SOCKET)
         ErrorHandling("socket error!");
-    
 
-    // bind()ë¥¼ í†µí•´ ì„œë²„ì˜ IP, Port ë“±ë¡.
+
+    // bind()¸¦ ÅëÇØ ¼­¹öÀÇ IP, Port µî·Ï.
     memset(&servAddr, 0, sizeof(SOCKADDR_IN));
-    servAddr.sin_family = AF_INET;                          // IPv4 ì¸í„°ë„· í”„ë¡œí† ì½œ 
+    servAddr.sin_family = AF_INET;                          // IPv4 ÀÎÅÍ³İ ÇÁ·ÎÅäÄİ 
 
-    // htons, htonl í•¨ìˆ˜ëŠ” ë°ì´í„°ë¥¼ ë„¤íŠ¸ì›Œí¬ ë°”ì´íŠ¸ ìˆœì„œë¡œ ë³€í™˜ì‹œì¼œì£¼ëŠ” ì—­í• .
-    // htonsëŠ” short integerë¥¼ ë„¤íŠ¸ì›Œí¬ ë°”ì´íŠ¸ ìˆœì„œë¡œ,
-    // htonlëŠ” long intergerë¥¼ ë„¤íŠ¸ì›Œí¬ ë°”ì´íŠ¸ ìˆœì„œë¡œ ë³€í™˜.
-    servAddr.sin_port = htons(8000);                // í¬íŠ¸ ë²ˆí˜¸ ì„¤ì •.
-    servAddr.sin_addr.s_addr = htonl(INADDR_ANY);    // 32ë¹„íŠ¸ IPv4 ì£¼ì†Œ. INADDR_ANYëŠ” ì„œë²„ì˜ IP ì£¼ì†Œë¥¼ ìë™ìœ¼ë¡œ ì°¾ì•„ ëŒ€ì…ì‹œì¼œì£¼ëŠ” í•¨ìˆ˜.
+    // htons, htonl ÇÔ¼ö´Â µ¥ÀÌÅÍ¸¦ ³×Æ®¿öÅ© ¹ÙÀÌÆ® ¼ø¼­·Î º¯È¯½ÃÄÑÁÖ´Â ¿ªÇÒ.
+    // htons´Â short integer¸¦ ³×Æ®¿öÅ© ¹ÙÀÌÆ® ¼ø¼­·Î,
+    // htonl´Â long interger¸¦ ³×Æ®¿öÅ© ¹ÙÀÌÆ® ¼ø¼­·Î º¯È¯.
+    servAddr.sin_port = htons(portNumber);                // Æ÷Æ® ¹øÈ£ ¼³Á¤.
+    servAddr.sin_addr.s_addr = htonl(INADDR_ANY);    // 32ºñÆ® IPv4 ÁÖ¼Ò. INADDR_ANY´Â ¼­¹öÀÇ IP ÁÖ¼Ò¸¦ ÀÚµ¿À¸·Î Ã£¾Æ ´ëÀÔ½ÃÄÑÁÖ´Â ÇÔ¼ö.
 
     if (bind(servSock, (void*)&servAddr, sizeof(servAddr)) == SOCKET_ERROR)
         ErrorHandling("bind error!");
 
-    // listen()ì„ í†µí•´ í´ë¼ì´ì–¸íŠ¸ connect() ì ‘ì† ìš”ì²­ì„ í™•ì¸í•˜ë„ë¡ í•´ì¤€ë‹¤. ìš”ì²­ í™•ì¸ ì‹œ accept() ì— ë„˜ê²¨ì¤€ë‹¤.
-    // ë‘ ë²ˆì§¸ ì¸ìëŠ” ìµœëŒ€ ì—°ê²° íšŸìˆ˜.
+    // listen()À» ÅëÇØ Å¬¶óÀÌ¾ğÆ® connect() Á¢¼Ó ¿äÃ»À» È®ÀÎÇÏµµ·Ï ÇØÁØ´Ù. ¿äÃ» È®ÀÎ ½Ã accept() ¿¡ ³Ñ°ÜÁØ´Ù.
+    // µÎ ¹øÂ° ÀÎÀÚ´Â ÃÖ´ë ¿¬°á È½¼ö.
     if (listen(servSock, MAXIMUM_CONNECTION_COUNT) == SOCKET_ERROR)
         ErrorHandling("listen error!");
 
     fromLen = sizeof(clntAddr);
 
-    // accept()ë¥¼ í†µí•´ í´ë¼ì´ì–¸íŠ¸ ìš”ì²­ì„ ì²˜ë¦¬, í´ë¼ì´ì–¸íŠ¸ì™€ì˜ í†µì‹ ì„ ìœ„í•œ ì†Œì¼“ ìƒì„±.
+    // accept()¸¦ ÅëÇØ Å¬¶óÀÌ¾ğÆ® ¿äÃ»À» Ã³¸®, Å¬¶óÀÌ¾ğÆ®¿ÍÀÇ Åë½ÅÀ» À§ÇÑ ¼ÒÄÏ »ı¼º.
     clntSock = accept(servSock, (void*)&clntAddr, &fromLen);
     if (clntSock == INVALID_SOCKET) {
         ErrorHandling("accept error!");
@@ -78,9 +82,7 @@ int main(int argc, char** argv) {
     closesocket(servSock);
 
     while (1) {
-        printf("RECEIVING MESSAGE..\n");
-        
-        // recv() ëŠ” ì†Œì¼“ìœ¼ë¡œë¶€í„° ë°ì´í„°ë¥¼ ìˆ˜ì‹ .
+        // recv() ´Â ¼ÒÄÏÀ¸·ÎºÎÅÍ µ¥ÀÌÅÍ¸¦ ¼ö½Å.
         nRcv = recv(clntSock, message, sizeof(message) - 1, 0);
 
         if (nRcv == SOCKET_ERROR) {
@@ -94,7 +96,7 @@ int main(int argc, char** argv) {
 
     closesocket(clntSock);
 
-    // ì†Œì¼“ì´ ë‹«íˆê³  íì— ë‚¨ì€ ë°ì´í„°ë¥¼ ì²˜ë¦¬.
+    // ¼ÒÄÏÀÌ ´İÈ÷°í Å¥¿¡ ³²Àº µ¥ÀÌÅÍ¸¦ Ã³¸®.
     WSACleanup();
 
     _getch();
